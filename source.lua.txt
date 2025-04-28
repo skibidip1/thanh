@@ -1,4 +1,4 @@
-local Update = (loadstring(game:HttpGet("https://you.whimper.xyz/sources/relzhub/dep/pc.lua")))();
+local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
 local Alert = (loadstring(game:HttpGet("https://raw.githubusercontent.com/AnhTuanDzai-Hub/UIMenu/refs/heads/main/alert.lua")))();
 local Library = Update:Window("by tuananhiosdz");
 local MainTab = Library:Tab("Main", "rbxassetid://10723407389");
