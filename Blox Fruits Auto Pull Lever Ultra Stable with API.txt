@@ -1,0 +1,584 @@
+-- Blox Fruits Auto Pull Lever Script - Ultra Stable with API Server Hopping
+-- Features: Auto Pull Lever, Auto Find Mirage Island, Auto Look Moon, Auto Collect Blue Gear, Fast Attack, Auto Haki, Auto Equip Weapon
+-- Notes: Uses API to find servers with Rip_indra/Dough King/Mirage Island already spawned. No summoning or item farming.
+-- Requirements: Third Sea, Race V3, level 2300+ recommended for boss fights
+-- Warning: Use on private server with alt account to avoid bans.
+
+-- Services
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+
+-- Local player
+local LocalPlayer = Players.LocalPlayer
+local function GetCharacter()
+    local character = LocalPlayer.Character
+    return character and character:FindFirstChild("HumanoidRootPart") and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0
+end
+
+-- Remotes and Modules
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+local Validator = Remotes and Remotes:WaitForChild("Validator", 10)
+local CommF = Remotes and Remotes:WaitForChild("CommF_", 10)
+local CommE = Remotes and Remotes:WaitForChild("CommE", 10)
+local Net = ReplicatedStorage:WaitForChild("Modules", 10):WaitForChild("Net", 10)
+local RegisterAttack = Net and Net:WaitForChild("RE/RegisterAttack", 10)
+local RegisterHit = Net and Net:WaitForChild("RE/RegisterHit", 10)
+
+-- Settings
+_G.FastAttack = true
+_G.SelectWeapon = "Melee"
+local Settings = {
+    AutoClick = true,
+    ClickDelay = 0.05 -- Optimized for performance
+}
+local FastAttack = {
+    Distance = 100,
+    attackMobs = true,
+    attackPlayers = false
+}
+local maxHopRetries = 20
+local hopRetryDelay = 10
+
+-- Server Hopping API
+local TrollApi = loadstring(game:HttpGet("https://raw.githubusercontent.com/PorryDepTrai/exploit/main/SimpleTroll.lua"))()
+
+local function decode(job)
+    return TrollApi["Decode JobId API Porry | discord.gg/umaru | MB KHOI"](job, "discord.gg/umaru | MB_Bank 9929992999 Phan Dat Khoi")
+end
+
+local function scrapeAPI(target)
+    local url
+    if target == "indra" then
+        url = "https://hostserver.porry.store/bloxfruit/bot/JobId/indra"
+    elseif target == "doughking" then
+        url = "https://hostserver.porry.store/bloxfruit/bot/JobId/doughking"
+    elseif target == "mirage" then
+        url = "https://hostserver.porry.store/bloxfruit/bot/JobId/mirage"
+    else
+        return nil
+    end
+
+    local success, response = pcall(function()
+        return game:HttpGet(url)
+    end)
+
+    if success then
+        local data = HttpService:JSONDecode(response)
+        return data
+    else
+        warn("Failed to fetch JobId for " .. target .. ": " .. tostring(response))
+        return nil
+    end
+end
+
+local function hopToServer(target)
+    for i = 1, maxHopRetries do
+        if not GetCharacter() then
+            warn("Character not loaded. Waiting...")
+            wait(5)
+            return false
+        end
+        local data = scrapeAPI(target)
+        if data and data.JobId then
+            for _, job in ipairs(data.JobId) do
+                for jobId, _ in pairs(job) do
+                    print("Hopping to server with JobId: " .. jobId .. " for " .. target)
+                    pcall(function()
+                        TeleportService:TeleportToPlaceInstance(game.PlaceId, decode(jobId))
+                    end)
+                    wait(hopRetryDelay)
+                    return true
+                end
+            end
+        else
+            warn("No JobId found for " .. target .. ". Retry " .. i .. "/" .. maxHopRetries)
+            wait(hopRetryDelay)
+        end
+    end
+    warn("Failed to find server with " .. target .. " after " .. maxHopRetries .. " retries.")
+    return false
+end
+
+-- Fast Attack Functions
+local function IsAlive(character)
+    return character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0
+end
+
+local function ProcessEnemies(OthersEnemies, Folder)
+    local BasePart = nil
+    for _, Enemy in Folder:GetChildren() do
+        local Head = Enemy:FindFirstChild("Head")
+        if Head and IsAlive(Enemy) and LocalPlayer:DistanceFromCharacter(Head.Position) < FastAttack.Distance then
+            if Enemy ~= LocalPlayer.Character then
+                table.insert(OthersEnemies, {Enemy, Head})
+                BasePart = Head
+            end
+        end
+    end
+    return BasePart
+end
+
+function FastAttack:Attack(BasePart, OthersEnemies)
+    if not BasePart or #OthersEnemies == 0 then
+        return
+    end
+    RegisterAttack:FireServer(Settings.ClickDelay or 0)
+    RegisterHit:FireServer(BasePart, OthersEnemies)
+end
+
+function FastAttack:AttackNearest()
+    if not GetCharacter() then return end
+    local OthersEnemies = {}
+    local Part1 = ProcessEnemies(OthersEnemies, Workspace.Enemies)
+    local Part2 = ProcessEnemies(OthersEnemies, Workspace.Characters)
+
+    local character = LocalPlayer.Character
+    if not character then return end
+
+    local equippedWeapon = character:FindFirstChildOfClass("Tool")
+    if equippedWeapon and equippedWeapon:FindFirstChild("LeftClickRemote") then
+        for _, enemyData in ipairs(OthersEnemies) do
+            local enemy = enemyData[1]
+            local direction = (enemy.HumanoidRootPart.Position - character:GetPivot().Position).Unit
+            pcall(function()
+                equippedWeapon.LeftClickRemote:FireServer(direction, 1)
+            end)
+        end
+    elseif #OthersEnemies > 0 then
+        self:Attack(Part1 or Part2, OthersEnemies)
+    end
+end
+
+function FastAttack:BladeHits()
+    if not GetCharacter() then return end
+    local Equipped = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+    if Equipped and Equipped.ToolTip ~= "Gun" then
+        self:AttackNearest()
+    end
+end
+
+task.spawn(function()
+    while task.wait(Settings.ClickDelay) do
+        if Settings.AutoClick and _G.FastAttack then
+            pcall(function()
+                FastAttack:BladeHits()
+            end)
+        end
+    end
+end)
+
+-- Support Functions
+function AutoHaki()
+    if not GetCharacter() then return end
+    if not LocalPlayer.Character:FindFirstChild("HasBuso") then
+        pcall(function()
+            CommF:InvokeServer("Buso")
+        end)
+    end
+end
+
+function EquipWeapon(ToolSe)
+    if not GetCharacter() then return end
+    if LocalPlayer.Backpack:FindFirstChild(ToolSe) then
+        local Tool = LocalPlayer.Backpack:FindFirstChild(ToolSe)
+        pcall(function()
+            LocalPlayer.Character.Humanoid:EquipTool(Tool)
+        end)
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            if _G.SelectWeapon == "Melee" then
+                for _, v in pairs(LocalPlayer.Backpack:GetChildren()) do
+                    if v.ToolTip == "Melee" then
+                        _G.SelectWeapon = v.Name
+                        EquipWeapon(v.Name)
+                        break
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- GUI Library
+local function CreateGUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "AutoPullLeverGUI"
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(0, 300, 0, 350)
+    Frame.Position = UDim2.new(0.5, -150, 0.5, -175)
+    Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Frame.BorderSizePixel = 0
+    Frame.Parent = ScreenGui
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 30)
+    Title.Text = "Blox Fruits Auto Pull Lever"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Title.TextScaled = true
+    Title.Parent = Frame
+
+    local function CreateToggle(name, callback)
+        local Toggle = Instance.new("TextButton")
+        Toggle.Size = UDim2.new(1, -10, 0, 30)
+        Toggle.Position = UDim2.new(0, 5, 0, #Frame:GetChildren() * 35)
+        Toggle.Text = name .. ": OFF"
+        Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Toggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        Toggle.TextScaled = true
+        Toggle.Parent = Frame
+
+        local state = false
+        Toggle.MouseButton1Click:Connect(function()
+            state = not state
+            Toggle.Text = name .. ": " .. (state and "ON" or "OFF")
+            Toggle.BackgroundColor3 = state and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(70, 70, 70)
+            callback(state)
+        end)
+    end
+
+    return CreateToggle
+end
+
+-- Variables for toggles
+local autoPullLever = false
+local autoFindMirage = false
+local autoLookMoon = false
+local autoCollectGear = false
+local autoRipIndra = false
+local autoDoughKing = false
+
+-- Check prerequisites
+local function CheckPrerequisites()
+    local hasHat = LocalPlayer.Backpack:FindFirstChild("Rip_indra Hat") or LocalPlayer.Character:FindFirstChild("Rip_indra Hat")
+    local hasFractal = LocalPlayer.Backpack:FindFirstChild("Mirror Fractal") or LocalPlayer.Character:FindFirstChild("Mirror Fractal")
+    local hasV3 = LocalPlayer.Data.Race.Value ~= "" and LocalPlayer.Data.RaceLevel.Value >= 3
+    local inThirdSea = Workspace:FindFirstChild("ThirdSeaMap") ~= nil
+
+    if not hasHat then
+        warn("Missing Rip_indra Hat! Enable Auto Rip_indra to find and fight boss.")
+    end
+    if not hasFractal then
+        warn("Missing Mirror Fractal! Enable Auto Dough King to find and fight boss.")
+    end
+    if not hasV3 then
+        warn("Race V3 required! Upgrade your race to V3.")
+    end
+    if not inThirdSea then
+        warn("Must be in Third Sea!")
+    end
+
+    return hasHat and hasFractal and hasV3 and inThirdSea
+end
+
+-- Teleport function
+local function TeleportTo(position)
+    if not GetCharacter() then return end
+    local HumanoidRootPart = LocalPlayer.Character.HumanoidRootPart
+    local tweenInfo = TweenInfo.new((HumanoidRootPart.Position - position).Magnitude / 300, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(HumanoidRootPart, tweenInfo, {CFrame = CFrame.new(position)})
+    pcall(function()
+        tween:Play()
+        tween.Completed:Wait()
+    end)
+end
+
+-- Interact with NPC or object
+local function InteractWith(Object)
+    if not GetCharacter() or not Object or not Object:FindFirstChild("ClickDetector") then return false end
+    TeleportTo(Object.Position + Vector3.new(0, 5, 0))
+    wait(0.5)
+    pcall(function()
+        fireclickdetector(Object:FindFirstChild("ClickDetector"))
+    end)
+    return true
+end
+
+-- Find and fight Rip_indra
+local function FindRipIndra()
+    if not GetCharacter() then return false end
+    if hopToServer("indra") then
+        local indra = Workspace.Enemies:FindFirstChild("rip_indra True Form")
+        if indra and IsAlive(indra) then
+            TeleportTo(indra.HumanoidRootPart.Position)
+            _G.FastAttack = true
+            AutoHaki()
+            print("Rip_indra True Form found! Fighting with Fast Attack...")
+            while autoRipIndra and IsAlive(indra) and GetCharacter() do
+                wait(1)
+            end
+            return LocalPlayer.Backpack:FindFirstChild("Rip_indra Hat") or LocalPlayer.Character:FindFirstChild("Rip_indra Hat")
+        else
+            warn("Rip_indra not found in server. Hopping again...")
+            return false
+        end
+    end
+    return false
+end
+
+-- Find and fight Dough King
+local function FindDoughKing()
+    if not GetCharacter() then return false end
+    if hopToServer("doughking") then
+        local doughKing = Workspace.Enemies:FindFirstChild("Dough King")
+        if doughKing and IsAlive(doughKing) then
+            TeleportTo(doughKing.HumanoidRootPart.Position)
+            _G.FastAttack = true
+            AutoHaki()
+            print("Dough King found! Fighting with Fast Attack...")
+            while autoDoughKing and IsAlive(doughKing) and GetCharacter() do
+                wait(1)
+            end
+            return LocalPlayer.Backpack:FindFirstChild("Mirror Fractal") or LocalPlayer.Character:FindFirstChild("Mirror Fractal")
+        else
+            warn("Dough King not found in server. Hopping again...")
+            return false
+        end
+    end
+    return false
+end
+
+-- Check Mirage Island manually (fallback)
+local function CheckMirageManually()
+    if not GetCharacter() then return false end
+    return Workspace:FindFirstChild("MirageIsland") ~= nil
+end
+
+-- Find Mirage Island
+local function FindMirageIsland()
+    if not GetCharacter() then return false end
+    for i = 1, maxHopRetries do
+        if CheckMirageManually() then
+            return true
+        end
+        if hopToServer("mirage") then
+            wait(5)
+            if CheckMirageManually() then
+                return true
+            end
+        end
+        warn("Mirage Island not found. Retry " .. i .. "/" .. maxHopRetries)
+        wait(hopRetryDelay)
+    end
+    warn("Failed to find Mirage Island after " .. maxHopRetries .. " retries. Trying manual check...")
+    return CheckMirageManually()
+end
+
+-- Look at moon
+local function LookAtMoon()
+    if not GetCharacter() then return false end
+    local moon = Workspace:FindFirstChild("Moon") or Workspace:FindFirstChild("Sky"):FindFirstChild("Moon")
+    if moon then
+        pcall(function()
+            CommF:InvokeServer("ActivateAbility", LocalPlayer.Data.Race.Value)
+            wait(0.5)
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(LocalPlayer.Character.HumanoidRootPart.Position, moon.Position)
+            wait(5)
+            local resonated = LocalPlayer.PlayerGui:FindFirstChild("Main") and
+                             LocalPlayer.PlayerGui.Main:FindFirstChild("Notification") and
+                             LocalPlayer.PlayerGui.Main.Notification.Text:find("Your Mirror Fractal has resonated with the moon")
+            return resonated
+        end)
+    end
+    return false
+end
+
+-- Collect Blue Gear
+local function CollectBlueGear()
+    if not GetCharacter() then return false end
+    local gear = Workspace:FindFirstChild("BlueGear")
+    if gear then
+        for i = 1, 5 do
+            TeleportTo(gear.Position)
+            wait(0.5)
+            if pcall(function()
+                fireclickdetector(gear:FindFirstChildOfClass("ClickDetector"))
+            end) then
+                return true
+            end
+            warn("Failed to collect Blue Gear. Retry " .. i .. "/5")
+        end
+    end
+    return false
+end
+
+-- Pull Lever in Temple of Time
+local function PullLever()
+    if not GetCharacter() then return false end
+    local temple = Workspace:FindFirstChild("TempleOfTime")
+    if temple then
+        local lever = temple:FindFirstChild("Lever")
+        if lever then
+            for i = 1, 5 do
+                if InteractWith(lever) then
+                    return true
+                end
+                warn("Failed to pull lever. Retry " .. i .. "/5")
+                wait(1)
+            end
+        else
+            warn("Lever not found in Temple of Time!")
+        end
+    else
+        warn("Temple of Time not found!")
+    end
+    return false
+end
+
+-- Main logic
+local function Main()
+    if not GetCharacter() then
+        warn("Character not loaded. Waiting...")
+        wait(5)
+        return
+    end
+
+    AutoHaki()
+    EquipWeapon(_G.SelectWeapon)
+
+    -- Step 1: Get Rip_indra Hat
+    if autoRipIndra then
+        local hasHat = LocalPlayer.Backpack:FindFirstChild("Rip_indra Hat") or LocalPlayer.Character:FindFirstChild("Rip_indra Hat")
+        if not hasHat then
+            while autoRipIndra and not hasHat and GetCharacter() do
+                if FindRipIndra() then
+                    hasHat = LocalPlayer.Backpack:FindFirstChild("Rip_indra Hat") or LocalPlayer.Character:FindFirstChild("Rip_indra Hat")
+                end
+                wait(5)
+            end
+        end
+    end
+
+    -- Step 2: Get Mirror Fractal
+    if autoDoughKing then
+        local hasFractal = LocalPlayer.Backpack:FindFirstChild("Mirror Fractal") or LocalPlayer.Character:FindFirstChild("Mirror Fractal")
+        if not hasFractal then
+            while autoDoughKing and not hasFractal and GetCharacter() do
+                if FindDoughKing() then
+                    hasFractal = LocalPlayer.Backpack:FindFirstChild("Mirror Fractal") or LocalPlayer.Character:FindFirstChild("Mirror Fractal")
+                end
+                wait(5)
+            end
+        end
+    end
+
+    -- Check prerequisites
+    if not CheckPrerequisites() then
+        warn("Prerequisites not met. Script stopped.")
+        return
+    end
+
+    -- Step 3: TP to Great Tree and interact with Mysterious Force
+    print("Teleporting to Great Tree...")
+    for i = 1, 5 do
+        if not GetCharacter() then break end
+        TeleportTo(Vector3.new(-6500, 300, -12000))
+        wait(1)
+        local npc = Workspace.NPCs:FindFirstChild("Mysterious Force")
+        if npc and InteractWith(npc) then
+            break
+        end
+        warn("Failed to interact with Mysterious Force. Retry " .. i .. "/5")
+        wait(1)
+    end
+
+    -- Step 4: Find Mirage Island
+    if autoFindMirage then
+        print("Searching for Mirage Island...")
+        if FindMirageIsland() then
+            local mirage = Workspace:FindFirstChild("MirageIsland")
+            if mirage then
+                local highestPoint = mirage:GetModelCFrame().p + Vector3.new(0, 100, 0)
+                TeleportTo(highestPoint)
+                wait(1)
+
+                if autoLookMoon then
+                    print("Looking at moon...")
+                    for i = 1, 5 do
+                        if LookAtMoon() then
+                            print("Mirror Fractal resonated with moon!")
+                            break
+                        end
+                        warn("Failed to resonate with moon. Retry " .. i .. "/5")
+                        wait(2)
+                    end
+                end
+
+                if autoCollectGear then
+                    print("Collecting Blue Gear...")
+                    if CollectBlueGear() then
+                        print("Blue Gear collected!")
+                    else
+                        warn("Failed to collect Blue Gear.")
+                    end
+                end
+            else
+                warn("Mirage Island despawned!")
+            end
+        else
+            warn("Failed to find Mirage Island.")
+        end
+    end
+
+    -- Pull Lever
+    if autoPullLever then
+        print("Pulling lever in Temple of Time...")
+        if PullLever() then
+            print("Lever pulled successfully!")
+        else
+            warn("Failed to pull lever.")
+        end
+    end
+end
+
+-- Create GUI and toggles
+local CreateToggle = CreateGUI()
+CreateToggle("Auto Rip_indra", function(state)
+    autoRipIndra = state
+    if state then
+        spawn(function()
+            Main()
+        end)
+    end
+end)
+CreateToggle("Auto Dough King", function(state)
+    autoDoughKing = state
+    if state then
+        spawn(function()
+            Main()
+        end)
+    end
+end)
+CreateToggle("Auto Find Mirage", function(state)
+    autoFindMirage = state
+    if state then
+        spawn(function()
+            Main()
+        end)
+    end
+end)
+CreateToggle("Auto Look Moon", function(state)
+    autoLookMoon = state
+end)
+CreateToggle("Auto Collect Blue Gear", function(state)
+    autoCollectGear = state
+end)
+CreateToggle("Auto Pull Lever", function(state)
+    autoPullLever = state
+end)
+
+-- Notify user
+print("Auto Pull Lever Script with API Server Hopping loaded! Use the GUI to toggle features.")
