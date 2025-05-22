@@ -4,11 +4,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 -- === Cấu hình ===
-local SeedNames = {"Kaitun", "A-X", "A-Z"}  -- Tên hạt giống bạn muốn auto
-local ActionDelay = 1.5  -- Thời gian delay giữa hành động (giảm lag và tránh bị phát hiện)
-local MaxSeedToBuy = 5  -- Mua tối đa từng loại hạt giống khi thiếu
+local SeedNames = {"Kaitun", "A-X", "A-Z"}  -- Tên hạt giống muốn auto
+local ActionDelay = 2  -- Delay giữa hành động để tránh lag và bị phát hiện
+local MaxSeedToBuy = 5  -- Số lượng mua khi thiếu
 
--- === Helper function kiểm tra hạt giống có trong balo hay không ===
+-- === Tìm RemoteEvent (thay đúng tên trong game) ===
+local EventsFolder = ReplicatedStorage:WaitForChild("Events")
+
+local BuySeedEvent = EventsFolder:WaitForChild("BuySeed") -- Thay tên cho đúng
+local PlantSeedEvent = EventsFolder:WaitForChild("PlantSeed")
+local UseItemEvent = EventsFolder:WaitForChild("UseItem")
+local HarvestEvent = EventsFolder:WaitForChild("Harvest")
+local ExpandLandEvent = EventsFolder:WaitForChild("ExpandLand")
+
+-- === Kiểm tra hạt giống trong balo ===
 local function HasSeed(seedName)
     return player.Backpack:FindFirstChild(seedName) or player.Character:FindFirstChild(seedName)
 end
@@ -16,40 +25,41 @@ end
 -- === Mua hạt giống ===
 local function BuySeed(seedName, quantity)
     quantity = quantity or 1
-    local buyEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("BuySeed")
+    print("Đang mua hạt:", seedName, "x"..quantity)
     for i = 1, quantity do
-        buyEvent:FireServer(seedName)
+        BuySeedEvent:FireServer(seedName)
         wait(0.5)
     end
+    print("Mua xong hạt:", seedName)
 end
 
 -- === Trồng cây ===
 local function PlantSeed(seedName)
-    local plantEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("PlantSeed")
-    plantEvent:FireServer(seedName)
+    print("Trồng hạt:", seedName)
+    PlantSeedEvent:FireServer(seedName)
 end
 
 -- === Tưới nước và bón phân ===
 local function UseItem(itemName)
-    local useEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("UseItem")
-    useEvent:FireServer(itemName)
+    print("Sử dụng:", itemName)
+    UseItemEvent:FireServer(itemName)
 end
 
 -- === Thu hoạch cây ===
 local function Harvest()
-    local harvestEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Harvest")
-    harvestEvent:FireServer()
+    print("Thu hoạch cây")
+    HarvestEvent:FireServer()
 end
 
 -- === Mở rộng đất ===
 local function ExpandLand()
-    local expandEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("ExpandLand")
-    expandEvent:FireServer()
+    print("Mở rộng đất")
+    ExpandLandEvent:FireServer()
 end
 
 -- === Vòng lặp auto chính ===
 while true do
-    -- 1. Mua hạt giống nếu thiếu
+    -- Mua hạt nếu thiếu
     for _, seed in ipairs(SeedNames) do
         if not HasSeed(seed) then
             BuySeed(seed, MaxSeedToBuy)
@@ -57,7 +67,7 @@ while true do
         end
     end
 
-    -- 2. Trồng cây với tất cả hạt giống có trong balo
+    -- Trồng hạt có trong balo
     for _, seed in ipairs(SeedNames) do
         if HasSeed(seed) then
             PlantSeed(seed)
@@ -65,19 +75,19 @@ while true do
         end
     end
 
-    -- 3. Tưới nước và bón phân
+    -- Tưới nước và bón phân
     UseItem("WateringCan")
     wait(1)
     UseItem("Fertilizer")
     wait(1)
 
-    -- 4. Thu hoạch cây đã chín
+    -- Thu hoạch
     Harvest()
     wait(ActionDelay)
 
-    -- 5. Mở rộng đất nếu đủ tiền (game tự kiểm tra)
+    -- Mở rộng đất
     ExpandLand()
     wait(ActionDelay)
 
-    wait(3) -- Delay trước khi vòng lặp tiếp theo
+    wait(3) -- Delay vòng lặp tiếp theo
 end
