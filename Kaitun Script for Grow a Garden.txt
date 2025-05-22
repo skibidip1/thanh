@@ -1,27 +1,28 @@
--- Kaitun Script Full A-Z cho Grow a Garden
--- Tạo bởi Grok, tối ưu cho Roblox vào 22/05/2025
--- Hỗ trợ: Auto Plant, Auto Harvest, Auto Sell, Infinite Seeds, Auto Buy Upgrades, Unlock Special Plants
--- Cảnh báo: Sử dụng script có thể vi phạm điều khoản Roblox, dẫn đến khóa tài khoản!
+-- Kaitun Script Cải tiến cho Grow a Garden
+-- Tạo bởi Grok, cập nhật 22/05/2025
+-- Tính năng: Auto Plant, Auto Harvest, Auto Sell, Auto Buy Seeds, Unlock Special Plants, Anti-AFK
 
--- Khởi tạo
-print("[Kaitun Script] Đang khởi động cho Grow a Garden...")
+print("[Kaitun Script] Khởi động cho Grow a Garden...")
+
+-- Dịch vụ
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
--- Biến trạng thái
+-- Biến cấu hình
 local Settings = {
     AutoPlant = true,
     AutoHarvest = true,
     AutoSell = true,
-    InfiniteSeeds = true,
-    AutoUpgrade = true,
+    AutoBuySeeds = true,
     UnlockSpecialPlants = true,
     AntiAFK = true,
-    LoopDelay = 0.3, -- Độ trễ vòng lặp để tối ưu hiệu suất
+    LoopDelay = 0.5, -- Độ trễ để giảm lag
     SeedType = "Carrot", -- Loại hạt giống mặc định
-    SpecialPlant = "AngryPlant" -- Cây đặc biệt muốn mở khóa
+    SpecialPlant = "AngryPlant", -- Cây đặc biệt
+    MinSeeds = 10 -- Mua thêm hạt nếu dưới 10
 }
 
 -- Kiểm tra game
@@ -30,18 +31,36 @@ if game.PlaceId ~= 126884695634066 then
     return
 end
 
--- Hàm bypass cơ bản (giảm nguy cơ bị phát hiện)
+-- Tìm remote events
+local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+if not Remotes then
+    print("[Kaitun Script] Lỗi: Không tìm thấy Remotes trong ReplicatedStorage!")
+    return
+end
+
+-- Kiểm tra các remote events cần thiết
+local PlantSeedRemote = Remotes:FindFirstChild("PlantSeed")
+local HarvestPlantRemote = Remotes:FindFirstChild("HarvestPlant")
+local SellCropsRemote = Remotes:FindFirstChild("SellCrops")
+local BuySeedsRemote = Remotes:FindFirstChild("BuySeeds")
+local UnlockSpecialPlantRemote = Remotes:FindFirstChild("UnlockSpecialPlant")
+
+if not (PlantSeedRemote and HarvestPlantRemote and SellCropsRemote and BuySeedsRemote) then
+    print("[Kaitun Script] Lỗi: Một số remote events không tồn tại. Game có thể đã cập nhật!")
+    return
+end
+
+-- Hàm bypass cơ bản và chống AFK
 local function bypassAntiCheat()
-    -- Vô hiệu hóa một số kiểm tra client-side
+    print("[Kaitun Script] Khởi động bypass và Anti-AFK...")
     if LocalPlayer.Character then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16 -- Đặt tốc độ bình thường
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
     end
-    -- Giả lập input người chơi để tránh bị kick AFK
     if Settings.AntiAFK then
         spawn(function()
             while Settings.AntiAFK and wait(60) do
-                game:GetService("VirtualUser"):Click()
-                print("[Kaitun Script] Anti-AFK: Giả lập click chuột")
+                VirtualUser:Click()
+                print("[Kaitun Script] Anti-AFK: Đã giả lập click chuột")
             end
         end)
     end
@@ -49,11 +68,18 @@ end
 
 -- Hàm tự động trồng cây
 local function autoPlant()
+    print("[Kaitun Script] Auto Plant: Đã bật")
     while Settings.AutoPlant and wait(Settings.LoopDelay) do
-        for _, plot in pairs(Workspace.Plots:GetChildren()) do
+        local plots = Workspace:FindFirstChild("Plots")
+        if not plots then
+            print("[Kaitun Script] Lỗi: Không tìm thấy Plots trong Workspace!")
+            return
+        end
+        for _, plot in pairs(plots:GetChildren()) do
             if plot:IsA("Model") and plot:FindFirstChild("Soil") and not plot:FindFirstChild("Plant") then
                 pcall(function()
-                    ReplicatedStorage.Remotes.PlantSeed:FireServer(plot, Settings.SeedType)
+                    PlantSeedRemote:FireServer(plot, Settings.SeedType)
+                    print("[Kaitun Script] Đã trồng " .. Settings.SeedType .. " trên ô đất")
                 end)
             end
         end
@@ -62,11 +88,15 @@ end
 
 -- Hàm tự động thu hoạch
 local function autoHarvest()
+    print("[Kaitun Script] Auto Harvest: Đã bật")
     while Settings.AutoHarvest and wait(Settings.LoopDelay) do
-        for _, plot in pairs(Workspace.Plots:GetChildren()) do
+        local plots = Workspace:FindFirstChild("Plots")
+        if not plots then return end
+        for _, plot in pairs(plots:GetChildren()) do
             if plot:IsA("Model") and plot:FindFirstChild("Plant") and plot.Plant:FindFirstChild("Mature") then
                 pcall(function()
-                    ReplicatedStorage.Remotes.HarvestPlant:FireServer(plot)
+                    HarvestPlantRemote:FireServer(plot)
+                    print("[Kaitun Script] Đã thu hoạch cây trên ô đất")
                 end)
             end
         end
@@ -75,32 +105,27 @@ end
 
 -- Hàm tự động bán
 local function autoSell()
+    print("[Kaitun Script] Auto Sell: Đã bật")
     while Settings.AutoSell and wait(1) do
         pcall(function()
-            ReplicatedStorage.Remotes.SellCrops:FireServer()
+            SellCropsRemote:FireServer()
+            print("[Kaitun Script] Đã bán cây")
         end)
     end
 end
 
--- Hàm kích hoạt Infinite Seeds
-local function infiniteSeeds()
-    while Settings.InfiniteSeeds and wait(5) do
+-- Hàm tự động mua hạt giống
+local function autoBuySeeds()
+    print("[Kaitun Script] Auto Buy Seeds: Đã bật")
+    while Settings.AutoBuySeeds and wait(5) do
         pcall(function()
-            ReplicatedStorage.Remotes.BuySeeds:FireServer(Settings.SeedType, 99999)
-            print("[Kaitun Script] Infinite Seeds: Đã yêu cầu 99999 hạt giống " .. Settings.SeedType)
-        end)
-    end
-end
-
--- Hàm tự động mua nâng cấp
-local function autoBuyUpgrades()
-    while Settings.AutoUpgrade and wait(2) do
-        pcall(function()
-            -- Mua các nâng cấp như ô đất, tưới nước nhanh hơn, v.v.
-            for _, upgrade in pairs({"MorePlots", "FasterWatering", "BetterSeeds"}) do
-                ReplicatedStorage.Remotes.BuyUpgrade:FireServer(upgrade)
+            -- Kiểm tra số lượng hạt giống (giả sử game có dữ liệu này)
+            local seedCount = LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("MainGui"):FindFirstChild("SeedsFrame") and LocalPlayer.PlayerGui.MainGui.SeedsFrame.SeedsLabel.Text:match("%d+")
+            seedCount = seedCount and tonumber(seedCount) or 0
+            if seedCount < Settings.MinSeeds then
+                BuySeedsRemote:FireServer(Settings.SeedType, 50)
+                print("[Kaitun Script] Đã mua 50 hạt " .. Settings.SeedType .. " (hiện có: " .. seedCount .. ")")
             end
-            print("[Kaitun Script] Auto Upgrade: Đã thử mua nâng cấp")
         end)
     end
 end
@@ -109,54 +134,30 @@ end
 local function unlockSpecialPlants()
     if Settings.UnlockSpecialPlants then
         pcall(function()
-            ReplicatedStorage.Remotes.UnlockSpecialPlant:FireServer(Settings.SpecialPlant)
-            print("[Kaitun Script] Unlock: Đã thử mở khóa " .. Settings.SpecialPlant)
+            UnlockSpecialPlantRemote:FireServer(Settings.SpecialPlant)
+            print("[Kaitun Script] Đã thử mở khóa " .. Settings.SpecialPlant)
         end)
     end
 end
 
--- Hàm chính để khởi động script
+-- Hàm chính
 local function main()
     print("[Kaitun Script] Khởi động tất cả tính năng...")
     bypassAntiCheat()
-    
-    if Settings.AutoPlant then
-        spawn(autoPlant)
-        print("[Kaitun Script] Auto Plant: Đã bật")
-    end
-    if Settings.AutoHarvest then
-        spawn(autoHarvest)
-        print("[Kaitun Script] Auto Harvest: Đã bật")
-    end
-    if Settings.AutoSell then
-        spawn(autoSell)
-        print("[Kaitun Script] Auto Sell: Đã bật")
-    end
-    if Settings.InfiniteSeeds then
-        spawn(infiniteSeeds)
-        print("[Kaitun Script] Infinite Seeds: Đã bật")
-    end
-    if Settings.AutoUpgrade then
-        spawn(autoBuyUpgrades)
-        print("[Kaitun Script] Auto Upgrade: Đã bật")
-    end
-    if Settings.UnlockSpecialPlants then
-        spawn(unlockSpecialPlants)
-        print("[Kaitun Script] Unlock Special Plants: Đã bật")
-    end
+    if Settings.AutoPlant then spawn(autoPlant) end
+    if Settings.AutoHarvest then spawn(autoHarvest) end
+    if Settings.AutoSell then spawn(autoSell) end
+    if Settings.AutoBuySeeds then spawn(autoBuySeeds) end
+    if Settings.UnlockSpecialPlants then spawn(unlockSpecialPlants) end
 end
 
--- Xử lý lỗi và chạy lại nếu cần
-local function safeRun()
-    local success, err = pcall(main)
-    if not success then
-        print("[Kaitun Script] Lỗi: " .. err)
-        wait(5)
-        print("[Kaitun Script] Thử chạy lại...")
-        safeRun()
-    end
+-- Chạy script an toàn
+local success, err = pcall(main)
+if not success then
+    print("[Kaitun Script] Lỗi: " .. err)
+    wait(5)
+    print("[Kaitun Script] Thử chạy lại...")
+    pcall(main)
 end
 
--- Khởi động script
-safeRun()
-print("[Kaitun Script] Hoàn tất! Script đang chạy với tất cả tính năng.")
+print("[Kaitun Script] Hoàn tất! Script đang chạy.")
