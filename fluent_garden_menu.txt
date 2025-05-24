@@ -1,0 +1,437 @@
+-- Fluent Design Garden Menu
+-- Đặt script này vào StarterPlayer > StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Tạo ScreenGui
+local fluentGui = Instance.new("ScreenGui")
+fluentGui.Name = "FluentGardenMenu"
+fluentGui.Parent = playerGui
+fluentGui.ResetOnSpawn = false
+
+-- Main Container với glass effect
+local mainContainer = Instance.new("Frame")
+mainContainer.Name = "MainContainer"
+mainContainer.Size = UDim2.new(0, 800, 0, 600)
+mainContainer.Position = UDim2.new(0.5, -400, 0.5, -300)
+mainContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainContainer.BackgroundTransparency = 0.1
+mainContainer.BorderSizePixel = 0
+mainContainer.Visible = false
+mainContainer.Parent = fluentGui
+
+-- Blur effect background
+local blurFrame = Instance.new("Frame")
+blurFrame.Name = "BlurBackground"
+blurFrame.Size = UDim2.new(1.2, 0, 1.2, 0)
+blurFrame.Position = UDim2.new(-0.1, 0, -0.1, 0)
+blurFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+blurFrame.BackgroundTransparency = 0.3
+blurFrame.BorderSizePixel = 0
+blurFrame.Parent = mainContainer
+
+local blurCorner = Instance.new("UICorner")
+blurCorner.CornerRadius = UDim.new(0, 20)
+blurCorner.Parent = blurFrame
+
+-- Glass effect overlay
+local glassOverlay = Instance.new("Frame")
+glassOverlay.Name = "GlassOverlay"
+glassOverlay.Size = UDim2.new(1, 0, 1, 0)
+glassOverlay.Position = UDim2.new(0, 0, 0, 0)
+glassOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+glassOverlay.BackgroundTransparency = 0.9
+glassOverlay.BorderSizePixel = 0
+glassOverlay.Parent = mainContainer
+
+local glassCorner = Instance.new("UICorner")
+glassCorner.CornerRadius = UDim.new(0, 20)
+glassCorner.Parent = glassOverlay
+
+-- Stroke border
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(100, 100, 100)
+stroke.Thickness = 1
+stroke.Transparency = 0.5
+stroke.Parent = mainContainer
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 20)
+mainCorner.Parent = mainContainer
+
+-- Header với gradient
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 100)
+header.Position = UDim2.new(0, 0, 0, 0)
+header.BackgroundTransparency = 1
+header.Parent = mainContainer
+
+-- Header gradient
+local headerGradient = Instance.new("Frame")
+headerGradient.Size = UDim2.new(1, 0, 1, 0)
+headerGradient.Position = UDim2.new(0, 0, 0, 0)
+headerGradient.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+headerGradient.BackgroundTransparency = 0.2
+headerGradient.BorderSizePixel = 0
+headerGradient.Parent = header
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 20)
+headerCorner.Parent = headerGradient
+
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(76, 175, 80)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(139, 195, 74))
+}
+gradient.Rotation = 45
+gradient.Parent = headerGradient
+
+-- Title với glow effect
+local titleContainer = Instance.new("Frame")
+titleContainer.Size = UDim2.new(0.7, 0, 1, 0)
+titleContainer.Position = UDim2.new(0, 30, 0, 0)
+titleContainer.BackgroundTransparency = 1
+titleContainer.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, 0, 0.6, 0)
+title.Position = UDim2.new(0, 0, 0.2, 0)
+title.BackgroundTransparency = 1
+title.Text = "🌱 GROW A GARDEN"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = titleContainer
+
+-- Subtitle
+local subtitle = Instance.new("TextLabel")
+subtitle.Name = "Subtitle"
+subtitle.Size = UDim2.new(1, 0, 0.3, 0)
+subtitle.Position = UDim2.new(0, 0, 0.7, 0)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "Farming Simulator & Quest Manager"
+subtitle.TextColor3 = Color3.fromRGB(200, 255, 200)
+subtitle.TextScaled = true
+subtitle.Font = Enum.Font.Gotham
+subtitle.Parent = titleContainer
+
+-- Close button với hover effect
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 60, 0, 60)
+closeButton.Position = UDim2.new(1, -80, 0, 20)
+closeButton.BackgroundColor3 = Color3.fromRGB(244, 67, 54)
+closeButton.BackgroundTransparency = 0.1
+closeButton.BorderSizePixel = 0
+closeButton.Text = "✕"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 24
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = header
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 30)
+closeCorner.Parent = closeButton
+
+-- Navigation Bar
+local navBar = Instance.new("Frame")
+navBar.Name = "NavigationBar"
+navBar.Size = UDim2.new(1, -40, 0, 80)
+navBar.Position = UDim2.new(0, 20, 0, 120)
+navBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+navBar.BackgroundTransparency = 0.2
+navBar.BorderSizePixel = 0
+navBar.Parent = mainContainer
+
+local navCorner = Instance.new("UICorner")
+navCorner.CornerRadius = UDim.new(0, 15)
+navCorner.Parent = navBar
+
+local navStroke = Instance.new("UIStroke")
+navStroke.Color = Color3.fromRGB(80, 80, 80)
+navStroke.Thickness = 1
+navStroke.Transparency = 0.7
+navStroke.Parent = navBar
+
+-- Navigation buttons
+local navButtons = {"🌱 Cửa Hàng", "📋 Nhiệm Vụ", "🏆 Thành Tích", "⚙️ Cài Đặt"}
+local navButtonFrames = {}
+
+for i, buttonText in ipairs(navButtons) do
+    local navButton = Instance.new("TextButton")
+    navButton.Name = "NavButton" .. i
+    navButton.Size = UDim2.new(0.25, -10, 1, -20)
+    navButton.Position = UDim2.new((i-1) * 0.25, 5, 0, 10)
+    navButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    navButton.BackgroundTransparency = 0.3
+    navButton.BorderSizePixel = 0
+    navButton.Text = buttonText
+    navButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    navButton.TextScaled = true
+    navButton.Font = Enum.Font.Gotham
+    navButton.Parent = navBar
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 10)
+    buttonCorner.Parent = navButton
+    
+    table.insert(navButtonFrames, navButton)
+end
+
+-- Content Area
+local contentArea = Instance.new("Frame")
+contentArea.Name = "ContentArea"
+contentArea.Size = UDim2.new(1, -40, 1, -240)
+contentArea.Position = UDim2.new(0, 20, 0, 220)
+contentArea.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+contentArea.BackgroundTransparency = 0.3
+contentArea.BorderSizePixel = 0
+contentArea.Parent = mainContainer
+
+local contentCorner = Instance.new("UICorner")
+contentCorner.CornerRadius = UDim.new(0, 15)
+contentCorner.Parent = contentArea
+
+local contentStroke = Instance.new("UIStroke")
+contentStroke.Color = Color3.fromRGB(80, 80, 80)
+contentStroke.Thickness = 1
+contentStroke.Transparency = 0.7
+contentStroke.Parent = contentArea
+
+-- Scrolling Frame for content
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "ScrollFrame"
+scrollFrame.Size = UDim2.new(1, -20, 1, -20)
+scrollFrame.Position = UDim2.new(0, 10, 0, 10)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = 8
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+scrollFrame.Parent = contentArea
+
+-- Quest items với fluent cards
+local questData = {
+    {title = "🥕 Trồng 10 Cà Rót", desc = "Hãy trồng 10 cây cà rót để hoàn thành nhiệm vụ này", reward = "50 Gold", progress = "7/10"},
+    {title = "🍅 Thu Hoạch 25 Cà Chua", desc = "Thu hoạch 25 quả cà chua tươi ngon", reward = "100 Gold + Hạt giống đặc biệt", progress = "18/25"},
+    {title = "🌽 Trồng 5 Ngô", desc = "Trồng và chăm sóc 5 cây ngô", reward = "75 Gold", progress = "3/5"},
+    {title = "💧 Tưới Nước 50 Lần", desc = "Tưới nước cho cây cối 50 lần", reward = "Bình tưới nâng cấp", progress = "42/50"},
+    {title = "💰 Kiếm 1000 Gold", desc = "Tích lũy 1000 Gold từ việc bán nông sản", reward = "Unlock khu vực mới", progress = "750/1000"},
+    {title = "🎯 Hoàn Thành 10 Nhiệm Vụ", desc = "Hoàn thành 10 nhiệm vụ bất kỳ", reward = "Title: Garden Master", progress = "6/10"}
+}
+
+for i, quest in ipairs(questData) do
+    local questCard = Instance.new("Frame")
+    questCard.Name = "QuestCard" .. i
+    questCard.Size = UDim2.new(1, -20, 0, 120)
+    questCard.Position = UDim2.new(0, 10, 0, (i-1) * 140 + 10)
+    questCard.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    questCard.BackgroundTransparency = 0.2
+    questCard.BorderSizePixel = 0
+    questCard.Parent = scrollFrame
+    
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 12)
+    cardCorner.Parent = questCard
+    
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = Color3.fromRGB(76, 175, 80)
+    cardStroke.Thickness = 2
+    cardStroke.Transparency = 0.8
+    cardStroke.Parent = questCard
+    
+    -- Quest title
+    local questTitle = Instance.new("TextLabel")
+    questTitle.Size = UDim2.new(0.7, 0, 0.3, 0)
+    questTitle.Position = UDim2.new(0, 15, 0, 10)
+    questTitle.BackgroundTransparency = 1
+    questTitle.Text = quest.title
+    questTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    questTitle.TextXAlignment = Enum.TextXAlignment.Left
+    questTitle.TextScaled = true
+    questTitle.Font = Enum.Font.GothamBold
+    questTitle.Parent = questCard
+    
+    -- Quest description
+    local questDesc = Instance.new("TextLabel")
+    questDesc.Size = UDim2.new(0.9, 0, 0.35, 0)
+    questDesc.Position = UDim2.new(0, 15, 0.3, 0)
+    questDesc.BackgroundTransparency = 1
+    questDesc.Text = quest.desc
+    questDesc.TextColor3 = Color3.fromRGB(200, 200, 200)
+    questDesc.TextXAlignment = Enum.TextXAlignment.Left
+    questDesc.TextWrapped = true
+    questDesc.TextScaled = true
+    questDesc.Font = Enum.Font.Gotham
+    questDesc.Parent = questCard
+    
+    -- Progress bar
+    local progressBg = Instance.new("Frame")
+    progressBg.Size = UDim2.new(0.6, 0, 0, 8)
+    progressBg.Position = UDim2.new(0, 15, 0.75, 0)
+    progressBg.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    progressBg.BorderSizePixel = 0
+    progressBg.Parent = questCard
+    
+    local progressCorner = Instance.new("UICorner")
+    progressCorner.CornerRadius = UDim.new(0, 4)
+    progressCorner.Parent = progressBg
+    
+    local progressBar = Instance.new("Frame")
+    local current, total = quest.progress:match("(%d+)/(%d+)")
+    local progressPercent = tonumber(current) / tonumber(total)
+    progressBar.Size = UDim2.new(progressPercent, 0, 1, 0)
+    progressBar.Position = UDim2.new(0, 0, 0, 0)
+    progressBar.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = progressBg
+    
+    local progressBarCorner = Instance.new("UICorner")
+    progressBarCorner.CornerRadius = UDim.new(0, 4)
+    progressBarCorner.Parent = progressBar
+    
+    -- Progress text
+    local progressText = Instance.new("TextLabel")
+    progressText.Size = UDim2.new(0.3, 0, 0, 20)
+    progressText.Position = UDim2.new(0.65, 0, 0.72, 0)
+    progressText.BackgroundTransparency = 1
+    progressText.Text = quest.progress
+    progressText.TextColor3 = Color3.fromRGB(180, 180, 180)
+    progressText.TextScaled = true
+    progressText.Font = Enum.Font.Gotham
+    progressText.Parent = questCard
+    
+    -- Reward
+    local rewardLabel = Instance.new("TextLabel")
+    rewardLabel.Size = UDim2.new(0.3, 0, 0.25, 0)
+    rewardLabel.Position = UDim2.new(0.7, 0, 0.1, 0)
+    rewardLabel.BackgroundTransparency = 1
+    rewardLabel.Text = "🎁 " .. quest.reward
+    rewardLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+    rewardLabel.TextScaled = true
+    rewardLabel.Font = Enum.Font.GothamBold
+    rewardLabel.Parent = questCard
+    
+    -- Claim button (if completed)
+    if progressPercent >= 1 then
+        local claimButton = Instance.new("TextButton")
+        claimButton.Size = UDim2.new(0.25, 0, 0.3, 0)
+        claimButton.Position = UDim2.new(0.72, 0, 0.6, 0)
+        claimButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+        claimButton.BorderSizePixel = 0
+        claimButton.Text = "NHẬN"
+        claimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        claimButton.TextScaled = true
+        claimButton.Font = Enum.Font.GothamBold
+        claimButton.Parent = questCard
+        
+        local claimCorner = Instance.new("UICorner")
+        claimCorner.CornerRadius = UDim.new(0, 8)
+        claimCorner.Parent = claimButton
+    end
+end
+
+-- Update scroll canvas size
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, #questData * 140 + 20)
+
+-- Toggle button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(0, 120, 0, 50)
+toggleButton.Position = UDim2.new(0, 20, 0, 20)
+toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+toggleButton.BackgroundTransparency = 0.1
+toggleButton.BorderSizePixel = 0
+toggleButton.Text = "📋 MENU"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextScaled = true
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Parent = fluentGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 12)
+toggleCorner.Parent = toggleButton
+
+-- Animation functions
+local function fadeIn(gui)
+    gui.Visible = true
+    gui.BackgroundTransparency = 1
+    gui.Size = UDim2.new(0, 600, 0, 450)
+    
+    local tween = TweenService:Create(gui, 
+        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 0.1, Size = UDim2.new(0, 800, 0, 600)}
+    )
+    tween:Play()
+end
+
+local function fadeOut(gui)
+    local tween = TweenService:Create(gui,
+        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {BackgroundTransparency = 1, Size = UDim2.new(0, 600, 0, 450)}
+    )
+    tween:Play()
+    
+    tween.Completed:Connect(function()
+        gui.Visible = false
+    end)
+end
+
+-- Button hover effects
+local function addHoverEffect(button, hoverColor, normalColor)
+    button.MouseEnter:Connect(function()
+        local tween = TweenService:Create(button,
+            TweenInfo.new(0.2, Enum.EasingStyle.Quad),
+            {BackgroundColor3 = hoverColor}
+        )
+        tween:Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        local tween = TweenService:Create(button,
+            TweenInfo.new(0.2, Enum.EasingStyle.Quad),
+            {BackgroundColor3 = normalColor}
+        )
+        tween:Play()
+    end)
+end
+
+-- Add hover effects
+addHoverEffect(toggleButton, Color3.fromRGB(104, 159, 56), Color3.fromRGB(76, 175, 80))
+addHoverEffect(closeButton, Color3.fromRGB(229, 57, 53), Color3.fromRGB(244, 67, 54))
+
+for _, navButton in ipairs(navButtonFrames) do
+    addHoverEffect(navButton, Color3.fromRGB(80, 80, 80), Color3.fromRGB(60, 60, 60))
+end
+
+-- Event connections
+toggleButton.MouseButton1Click:Connect(function()
+    if mainContainer.Visible then
+        fadeOut(mainContainer)
+    else
+        fadeIn(mainContainer)
+    end
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    fadeOut(mainContainer)
+end)
+
+-- Keyboard shortcut
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.M then
+        if mainContainer.Visible then
+            fadeOut(mainContainer)
+        else
+            fadeIn(mainContainer)
+        end
+    end
+end)
